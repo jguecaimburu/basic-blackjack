@@ -1,0 +1,114 @@
+/* FONT IMPORT */
+
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto+Mono:wght@100;400;700&display=swap');
+
+
+/* ROOT VARIABLES */
+
+:root {
+  --color-01: #020111;
+  --color-opacity: rgba(234, 176, 209, 0.2);
+  }
+
+/* GENERAL DOCUMENT PROPERTIES */
+
+*,
+*::after,
+*::before {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+
+html {
+  font-size: 10px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+
+@media (max-width: 1000px) {
+  html {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 600px) {
+  html {
+    font-size: 8px;
+  }
+}
+
+@media (max-height: 600px) {
+  html {
+    font-size: 8px;
+  }
+}
+
+body {
+  position: relative;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: white;
+}
+
+main {
+  position: relative;
+}
+
+h2 {
+  font-size: 5rem;
+}
+
+h3 {
+  font-size: 3rem;
+}
+
+p {
+  font-size: 2rem;
+}
+
+li {
+  list-style: none;
+}
+
+a {
+  font-size: 2rem;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+a,
+a:active,
+a:focus,
+button,
+button:active,
+button:focus {
+  outline: none;
+}
+
+a::-moz-focus-inner,
+button::-moz-focus-inner {
+  border: 0;
+}
+
+.hidden {
+  position: absolute;
+  left: -10000px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* SPECIFIC */
+
+/* TO COMPLETE */
