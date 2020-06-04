@@ -31,7 +31,7 @@ const BJ = (function () {
     {figure: 'K', value: { soft: 10, hard: 10}, aceIndex: 13 },
   ]
 
-  const MIN_CARDS_TO_RESHUFFLE = 15 // DEFINE
+  const MIN_CARDS_TO_RESHUFFLE = 50
   const HOUSE_PLAYER_ID = 0
   const PLAYER_ID = 1
   const DEALING_ID = -1
@@ -63,6 +63,9 @@ const BJ = (function () {
     gameState.house.addPlayer(gameState.player)
     gameState.house.addPlayer(gameState.housePlayer)
   }
+
+  /*  HOUSE
+  ----------------------------------------------- */
 
   function createHouse () {
     const dealer = createDealer()
@@ -236,6 +239,9 @@ const BJ = (function () {
       startNextRound
     }
   }
+
+  /*  DEALER
+  ----------------------------------------------- */
   
   function createDealer () {
     const cards = []
@@ -316,64 +322,53 @@ const BJ = (function () {
     }
   }
 
-  function createPlayer (id) {
-    const hand = []
-    let handSums = { soft: 0, hard: 0 }
-    let house
+  /*  PLAYER
+  ----------------------------------------------- */
 
+  function createPlayer (id) {
+    const hand = createHand(id)
+    let house
+    
     function addHouse (playerHouse) {
       house = playerHouse
     }
-
+    
     function getID () {
       return id
     }
 
     function hit () {
       askForCard()
-      updateHandSums()
-      // EREASE OR CHANGE
-      console.log('player', id, ...hand.map(card => card.symbol))
-      //
       sendStateToHouse()
-
     }
-
+    
     function askForCard () {
       const newCard = house.dealCard()
-      newCard && hand.push(newCard)
+      newCard && hand.addCard(newCard)
     }
-
-    function updateHandSums () {
-      handSums = hand.reduce((sums, card) => {
-        for (const type in card.value) {
-          sums[type] += card.value[type]
-        }
-        return sums
-      }, { soft: 0, hard: 0 })
-    }
-
+    
+    
     function sendStateToHouse (done = false) {
       house.checkPlayerState({
         id,
-        handSums,
+        handSums: hand.sums(),
         done
       })
     }
-
+    
     function stand () {
       const done = true
       sendStateToHouse(done)
     }
-
+    
     function nextRound () {
       house.startNextRound()
     }
-
+    
     function emptyHand () {
-      hand.splice(0, hand.length)
+      hand.empty()
     }
-
+    
     return {
       id: getID(),
       addHouse,
@@ -383,7 +378,47 @@ const BJ = (function () {
       emptyHand
     }
   }
+  
+  /*  HAND
+  ----------------------------------------------- */
+  
+  function createHand (id) {
+    const cards = []
+    let handSums = { soft: 0, hard: 0 }
+    
+    function addCard (card) {
+      cards.push(card)
+      updateHandSums()
 
+      // EREASE OR CHANGE
+      console.log('player', id, ...cards.map(card => card.symbol))
+      //
+    }
+    
+    function updateHandSums () {
+      handSums = cards.reduce((sums, card) => {
+        for (const type in card.value) {
+          sums[type] += card.value[type]
+        }
+        return sums
+      }, { soft: 0, hard: 0 })
+    }
+    
+    function sums () {
+      return { ...handSums }
+    }
+    
+    function empty () {
+      cards.splice(0, cards.length)
+    }
+
+    return {
+      addCard,
+      empty,
+      sums
+    }
+  }
+  
   // function setupEventListeners () {
   // }
 
