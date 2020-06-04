@@ -31,7 +31,7 @@ const BJ = (function () {
     {figure: 'K', value: { soft: 10, hard: 10}, aceIndex: 13 },
   ]
 
-  const MIN_CARDS_TO_RESHUFFLE = 0 // DEFINE
+  const MIN_CARDS_TO_RESHUFFLE = 15 // DEFINE
   const HOUSE_PLAYER_ID = 0
   const PLAYER_ID = 1
   const DEALING_ID = -1
@@ -68,29 +68,20 @@ const BJ = (function () {
     const dealer = createDealer()
     const players = {}
     const playerSums = {}
-    let turn = PLAYER_ID
+    let turn
+    let isRoundActive
     
     function addPlayer (player) {
       players[player.id] = player
       player.addHouse(this)
     }
-
-    function dealNewHand () {
-      turn = DEALING_ID
-      for (let i = 1; i <= 2; i++) {
-        for (let id = PLAYER_ID; id >= 0; id--) {
-          players[id].hit()
-        }
-      }
-      turn = PLAYER_ID
-      // check blackjack
-    }
-
+    
     function dealCard () {
-      return dealer.dealCard()
+      if (isRoundActive) return dealer.dealCard()
     }
-
+    
     function checkPlayerState ({ id, handSums, done }) {
+      if (!isRoundActive) return ;
       savePlayerSums({ id, handSums })
       if (!done) {
         if (handSums.soft <= 21) return playerActive({ sum: handSums.soft, id })
@@ -103,13 +94,31 @@ const BJ = (function () {
         })
       }
     }
-
+    
+    function startNextRound () {
+      if (isRoundActive) return;
+      cleanTable()
+      activateRound()
+      takeDealingControl()
+      prepareDealer()
+      dealNewHand()
+      checkBlackJack()
+    }
+    
     function savePlayerSums ({ id, handSums }) {
       playerSums[id] = handSums
     }
-
+    
     function playerActive ({ sum, id }) {
-      if (!id && !turn) continueHouseHand(sum)
+      if (isHouse(id) && isHouseTurn()) continueHouseHand(sum)
+    }
+    
+    function isHouse (id) {
+      return !id
+    }
+
+    function isHouseTurn () {
+      return !turn
     }
     
     function continueHouseHand (sum) {
@@ -120,9 +129,9 @@ const BJ = (function () {
         players[HOUSE_PLAYER_ID].stand()
       }
     }
-
+    
     function playerBust ({ sum, id }) {
-      if (!id) {
+      if (isHouse(id)) {
         console.log(`House busted. Sum ${sum}`)
         finishRound()
       } else {
@@ -130,9 +139,9 @@ const BJ = (function () {
         finishRound()
       }
     }
-
+    
     function playerStands({ sum, id }) {
-      if (!id) {
+      if (isHouse(id)) {
         console.log(`House stands on ${sum}`)
         finishRound()
       } else {
@@ -140,18 +149,22 @@ const BJ = (function () {
         startOwnHand()
       }
     }
-
+    
     function startOwnHand () {
-      turn = HOUSE_PLAYER_ID
+      takePlayingControl()
       continueHouseHand(playerSums[HOUSE_PLAYER_ID].soft)
     }
 
+    function takePlayingControl () {
+      turn = HOUSE_PLAYER_ID
+    }
+    
     function finishRound () {
       checkWinner()
-      turn = PLAYER_ID
+      deactivateRound()
     }
 
-    function checkWinner () {
+    function checkWinner() {
       if (playerSums[PLAYER_ID].soft > 21) return console.log('House wins')
       const houseSum = playerSums[HOUSE_PLAYER_ID].soft
       if (houseSum > 21) return console.log('Player wins')
@@ -166,45 +179,93 @@ const BJ = (function () {
         console.log("It's a push!")
       }
     }
-
+    
+    function deactivateRound () {
+      isRoundActive = false
+    }
+    
     function cleanTable () {
-      // clean table on player message
-      // check if dealer needs to be restarted
-      // dealer should tell how many cards are left to deal
+      for (let id = PLAYER_ID; id >= 0; id--) {
+        players[id].emptyHand()
+      }
+    }
+    
+    function activateRound () {
+      isRoundActive = true
+    }
+    
+    function takeDealingControl () {
+      turn = DEALING_ID
+    }
+    
+    function prepareDealer () {
+      dealer.prepareForRound()
+    }
+    
+    function dealNewHand () {
+      for (let i = 1; i <= 2; i++) {
+        for (let id = PLAYER_ID; id >= 0; id--) {
+          players[id].hit()
+        }
+      }
+    }
+    
+    function checkBlackJack () {
+      for (let id = PLAYER_ID; id >= 0; id--) {
+        if (playerSums[id].hard === 21) {
+          console.log('BlackJack!')
+          return finishRound()
+        }
+      }
+      givePlayerControl()
     }
 
+    function givePlayerControl () {
+      turn = PLAYER_ID
+    }
+    
     return {
       addPlayer,
-      dealNewHand,
       dealCard,
-      checkPlayerState
+      checkPlayerState,
+      startNextRound
     }
   }
   
   function createDealer () {
     const cards = []
-    addDecksToCards()
-    shuffleCards()
-
+    let reshuffle
+    createNewCards()
+    
+    function createNewCards () {
+      emptyCards()
+      addDecksToCards()
+      shuffleCards()
+    }
+    
+    function emptyCards () {
+      cards.splice(0, cards.length)
+    }
+    
     function addDecksToCards () {
       for (let i = 0; i < DECK_QUANTITY; i++) {
         addDeck()
       }
     }
-
+    
     function addDeck () {
       for (const suit of SUITS) {
         addSuit(suit)
       }
     }
-
+    
     function addSuit (suit) {
       for (const rank of RANKS) {
         let card = createCard(suit, rank)
         cards.push(card)
       }
     }
-
+    
     function createCard (suit, rank) {
       return {
         suit: suit.name,
@@ -213,11 +274,11 @@ const BJ = (function () {
         symbol: getCardSymbol(suit, rank)
       }
     }
-
+    
     function getCardSymbol (suit, rank) {
       return String.fromCodePoint(suit.aceUnicode + rank.aceIndex)
     }
-
+    
     // Durstenfeld version of the Fisher–Yates shuffle algorithm
     // Check https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
     function shuffleCards () {
@@ -227,14 +288,26 @@ const BJ = (function () {
         cards[j] = cards[i]
         cards[i] = temp
       }
+      reshuffle = false
     }
-
+    
+    function prepareForRound () {
+      if (reshuffle) {
+        createNewCards()
+      }
+    }
+    
     function dealCard () {
-      return cards.pop()
+      let topCard = cards.pop()
+      if (cards.length < MIN_CARDS_TO_RESHUFFLE) reshuffle = true
+      // EREASE OR CHANGE
+      console.log(cards.length)
+      return topCard
     }
-
+    
     return {
-      dealCard
+      dealCard,
+      prepareForRound
     }
   }
 
@@ -262,7 +335,8 @@ const BJ = (function () {
     }
 
     function askForCard () {
-      hand.push(house.dealCard())
+      const newCard = house.dealCard()
+      newCard && hand.push(newCard)
     }
 
     function updateHandSums () {
@@ -287,8 +361,12 @@ const BJ = (function () {
       sendStateToHouse(done)
     }
 
-    function nextHand () {
-      // send message to house
+    function nextRound () {
+      house.startNextRound()
+    }
+
+    function emptyHand () {
+      hand.splice(0, hand.length)
     }
 
     return {
@@ -296,7 +374,8 @@ const BJ = (function () {
       addHouse,
       hit,
       stand,
-      nextHand
+      nextRound,
+      emptyHand
     }
   }
 
