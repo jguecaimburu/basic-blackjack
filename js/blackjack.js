@@ -31,6 +31,10 @@ const BJ = (function () {
     {figure: 'K', value: { soft: 10, hard: 10}, aceIndex: 13 },
   ]
 
+  const MIN_CARDS_TO_RESHUFFLE = 0 // DEFINE
+  const HOUSE_PLAYER_ID = 0
+  const PLAYER_ID = 1
+  const DEALING_ID = -1
 
 
   /*  GLOBALS
@@ -53,13 +57,134 @@ const BJ = (function () {
   ----------------------------------------------- */
   
   function configureState () {
-    gameState.dealer = createDealer()
+    gameState.house = createHouse()
+    gameState.housePlayer = createPlayer(HOUSE_PLAYER_ID)
+    gameState.player = createPlayer(PLAYER_ID)
+    gameState.house.addPlayer(gameState.player)
+    gameState.house.addPlayer(gameState.housePlayer)
   }
 
+  function createHouse () {
+    const dealer = createDealer()
+    const players = {}
+    const playerSums = {}
+    let turn = PLAYER_ID
+    
+    function addPlayer (player) {
+      players[player.id] = player
+      player.addHouse(this)
+    }
+
+    function dealNewHand () {
+      turn = DEALING_ID
+      for (let i = 1; i <= 2; i++) {
+        for (let id = PLAYER_ID; id >= 0; id--) {
+          players[id].hit()
+        }
+      }
+      turn = PLAYER_ID
+      // check blackjack
+    }
+
+    function dealCard () {
+      return dealer.dealCard()
+    }
+
+    function checkPlayerState ({ id, handSums, done }) {
+      savePlayerSums({ id, handSums })
+      if (!done) {
+        if (handSums.soft <= 21) return playerActive({ sum: handSums.soft, id })
+        if (handSums.hard <= 21) return playerActive({ sum: handSums.hard, id })
+        playerBust({ sum: handSums.soft, id })
+      } else {
+        playerStands({
+          sum: handSums.hard <= 21 ? handSums.hard : handSums.soft,
+          id
+        })
+      }
+    }
+
+    function savePlayerSums ({ id, handSums }) {
+      playerSums[id] = handSums
+    }
+
+    function playerActive ({ sum, id }) {
+      if (!id && !turn) continueHouseHand(sum)
+    }
+    
+    function continueHouseHand (sum) {
+      console.log('House is', sum)
+      if (sum < 17) {
+        players[HOUSE_PLAYER_ID].hit()
+      } else {
+        players[HOUSE_PLAYER_ID].stand()
+      }
+    }
+
+    function playerBust ({ sum, id }) {
+      if (!id) {
+        console.log(`House busted. Sum ${sum}`)
+        finishRound()
+      } else {
+        console.log(`Player busted. Sum ${sum}`)
+        finishRound()
+      }
+    }
+
+    function playerStands({ sum, id }) {
+      if (!id) {
+        console.log(`House stands on ${sum}`)
+        finishRound()
+      } else {
+        console.log(`Player stands on ${sum}`)
+        startOwnHand()
+      }
+    }
+
+    function startOwnHand () {
+      turn = HOUSE_PLAYER_ID
+      continueHouseHand(playerSums[HOUSE_PLAYER_ID].soft)
+    }
+
+    function finishRound () {
+      checkWinner()
+      turn = PLAYER_ID
+    }
+
+    function checkWinner () {
+      if (playerSums[PLAYER_ID].soft > 21) return console.log('House wins')
+      const houseSum = playerSums[HOUSE_PLAYER_ID].soft
+      if (houseSum > 21) return console.log('Player wins')
+      const playerSum = playerSums[PLAYER_ID].hard <= 21 ?
+        playerSums[PLAYER_ID].hard :
+        playerSums[PLAYER_ID].soft
+      if (playerSum > houseSum) {
+        console.log('Player wins!')
+      } else if (playerSum < houseSum) {
+        console.log('House wins!')
+      } else {
+        console.log("It's a push!")
+      }
+    }
+
+    function cleanTable () {
+      // clean table on player message
+      // check if dealer needs to be restarted
+      // dealer should tell how many cards are left to deal
+    }
+
+    return {
+      addPlayer,
+      dealNewHand,
+      dealCard,
+      checkPlayerState
+    }
+  }
+  
   function createDealer () {
     const cards = []
     addDecksToCards()
-    // shuffleCards()
+    shuffleCards()
 
     function addDecksToCards () {
       for (let i = 0; i < DECK_QUANTITY; i++) {
@@ -93,18 +218,86 @@ const BJ = (function () {
       return String.fromCodePoint(suit.aceUnicode + rank.aceIndex)
     }
 
+    // Durstenfeld version of the Fisher–Yates shuffle algorithm
+    // Check https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
+    function shuffleCards () {
+      for (let i = cards.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1))
+        let temp = cards[j]
+        cards[j] = cards[i]
+        cards[i] = temp
+      }
+    }
 
-    // function shuffleDeck () {
+    function dealCard () {
+      return cards.pop()
+    }
 
-    // }
+    return {
+      dealCard
+    }
+  }
 
-    // function deal () {
+  function createPlayer (id) {
+    const hand = []
+    let handSums = { soft: 0, hard: 0 }
+    let house
 
-    // }
+    function addHouse (playerHouse) {
+      house = playerHouse
+    }
 
-    // return {
-    //   deal
-    // }
+    function getID () {
+      return id
+    }
+
+    function hit () {
+      askForCard()
+      updateHandSums()
+      // EREASE OR CHANGE
+      console.log('player', id, ...hand.map(card => card.symbol))
+      //
+      sendStateToHouse()
+
+    }
+
+    function askForCard () {
+      hand.push(house.dealCard())
+    }
+
+    function updateHandSums () {
+      handSums = hand.reduce((sums, card) => {
+        for (const type in card.value) {
+          sums[type] += card.value[type]
+        }
+        return sums
+      }, { soft: 0, hard: 0 })
+    }
+
+    function sendStateToHouse (done = false) {
+      house.checkPlayerState({
+        id,
+        handSums,
+        done
+      })
+    }
+
+    function stand () {
+      const done = true
+      sendStateToHouse(done)
+    }
+
+    function nextHand () {
+      // send message to house
+    }
+
+    return {
+      id: getID(),
+      addHouse,
+      hit,
+      stand,
+      nextHand
+    }
   }
 
   // function setupEventListeners () {
@@ -209,6 +402,4 @@ const BJ = (function () {
   return gameState
 }())
 
-console.log(
-  `Hi there! ${String.fromCodePoint(0x1F637)}`
-)
+console.log('Vegas bb!')
