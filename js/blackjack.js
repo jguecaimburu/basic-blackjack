@@ -5,7 +5,7 @@ const BJ = (function () {
   /*  CONFIGURATION VALUES
   ----------------------------------------------- */
 
-  const DECK_QUANTITY = 1
+  const DECK_QUANTITY = 8
   
   const SUITS = [
     {name: 'spades', aceUnicode: 0x1F0A1 },
@@ -80,12 +80,17 @@ const BJ = (function () {
       if (isRoundActive) return dealer.dealCard()
     }
     
+    // Hit on soft 17 rule is applied
     function checkPlayerState ({ id, handSums, done }) {
       if (!isRoundActive) return ;
       savePlayerSums({ id, handSums })
       if (!done) {
-        if (handSums.soft <= 21) return playerActive({ sum: handSums.soft, id })
-        if (handSums.hard <= 21) return playerActive({ sum: handSums.hard, id })
+        if (handSums.soft === 21 || handSums.hard === 21) {
+          return playerStands({ sum: 21, id })
+        } 
+        if (handSums.soft <= 7) return playerActive({ sum: handSums.soft, id })
+        if (handSums.soft <= 11) return playerActive({ sum: handSums.hard, id })
+        if (handSums.soft < 21) return playerActive({ sum: handSums.soft, id })
         playerBust({ sum: handSums.soft, id })
       } else {
         playerStands({
