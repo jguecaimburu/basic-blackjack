@@ -6,8 +6,10 @@
 /* ROOT VARIABLES */
 
 :root {
-  --color-01: #020111;
-  --color-opacity: rgba(234, 176, 209, 0.2);
+  --color-red: #F05A55;
+  --color-black:#404041;
+  --color-yellow:#FFD754;
+  --color-grey:#C7B1C9;
   }
 
 /* GENERAL DOCUMENT PROPERTIES */
@@ -20,47 +22,32 @@
   margin: 0;
 }
 
-
-html {
-  font-size: 10px;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-html::-webkit-scrollbar {
-  display: none;
-}
-
-
-@media (max-width: 1000px) {
-  html {
-    font-size: 9px;
-  }
-}
-
-@media (max-width: 600px) {
-  html {
-    font-size: 8px;
-  }
-}
-
-@media (max-height: 600px) {
-  html {
-    font-size: 8px;
-  }
-}
-
 body {
   position: relative;
+  width: 100vw;
+  height: 100vh;
   font-family: 'Roboto Mono', monospace;
   font-size: 1rem;
   font-weight: 400;
   line-height: 1.4;
+  background-color: var(--color-red);
   color: white;
 }
 
 main {
   position: relative;
+  width: 80%;
+  height: 80%;
+  left: 10%;
+  top: 10%;
+  background-color: white;
+  border-radius: 50px;
+}
+
+h1 {
+  font-size: 4rem;
+  color: var(--color-grey);
+  text-align: center;
 }
 
 h2 {
@@ -112,3 +99,74 @@ button::-moz-focus-inner {
 /* SPECIFIC */
 
 /* TO COMPLETE */
+
+.hand {
+  position: absolute;
+  width: 50%;
+  height: 150px;
+  left: 25%;
+  display: flex;
+  align-content: center;
+  justify-content: center;
+  padding-right: 10%;
+}
+
+.hand--player-0 {
+  top: 20%;
+}
+
+.hand--player-1 {
+  bottom: 10%;
+}
+
+.hand__card {
+  position: relative;
+  overflow: hidden;
+  width: 75px;
+  background-color: transparent;
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  margin-right: -10px;
+}
+
+.hand__card:last-child {
+  overflow: visible;
+}
+
+.hand__card--received {
+  
+}
+
+.hand__card--discarded {
+  
+}
+
+.hand__card-content {
+  width: 200%;
+  height: 100%;
+  border-radius: 10px;
+  border: 3px solid white;
+}
+
+.hand__card--red {
+  /* color: white;
+  background-color: var(--color-red); */
+  color: transparent;
+  background-color: red;
+}
+
+.hand__card--black {
+  /* color: white;
+  background-color: var(--color-black); */
+  color: transparent;
+  background-color: black;
+}
+
+.hand__card--back {
+  color: transparent;
+  background-color: var(--color-yellow);
+}
+
+.btn {
+
+}
