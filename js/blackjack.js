@@ -6,6 +6,7 @@ const BJ = (function () {
   ----------------------------------------------- */
 
   const DECK_QUANTITY = 8
+  const MIN_CARDS_TO_RESHUFFLE = 50
   
   const SUITS = [
     {name: 'spades', aceUnicode: 0x1F0A1 },
@@ -31,11 +32,31 @@ const BJ = (function () {
     {figure: 'K', value: { soft: 10, hard: 10}, aceIndex: 13 },
   ]
 
-  const MIN_CARDS_TO_RESHUFFLE = 50
   const HOUSE_PLAYER_ID = 0
   const PLAYER_ID = 1
   const DEALING_ID = -1
-
+  
+  const DOM_SELECTORS = {
+    hand: {
+      containerPrefix: '.hand--player-',
+      cardContainer: '.hand__card',
+      receivedCard: '.hand__card--received',
+      discardedCard: '.hand__card--discarded'
+    },
+    card: {
+      basic: '.hand__card-content',
+      frontRed: '.hand__card--red',
+      frontBlack: '.hand__card--black',
+      back: '.hand__card--back'
+    },
+    buttons: {
+      hit: '.btn--hit',
+      stand: '.btn--stand',
+      nextRound: 'btn--deal'
+    }
+  }
+    
+  
 
   /*  GLOBALS
   ----------------------------------------------- */
@@ -88,7 +109,7 @@ const BJ = (function () {
       if (!isRoundActive) return ;
       savePlayerSums({ id, handSums })
       if (!done) {
-        if (handSums.soft === 21 || handSums.hard === 21) {
+        if (playerHasSoft21(id, handSums)) {
           return playerStands({ sum: 21, id })
         } 
         if (handSums.soft <= 7) return playerActive({ sum: handSums.soft, id })
@@ -116,17 +137,20 @@ const BJ = (function () {
     function savePlayerSums ({ id, handSums }) {
       playerSums[id] = handSums
     }
+
+    function playerHasSoft21 (id, handSums) {
+      return turn === PLAYER_ID &&
+        id === PLAYER_ID &&
+        (handSums.soft === 21 || handSums.hard === 21) 
+    }
     
     function playerActive ({ sum, id }) {
       if (isHouse(id) && isHouseTurn()) continueHouseHand(sum)
     }
     
-    function isHouse (id) {
-      return !id
-    }
-
+    
     function isHouseTurn () {
-      return !turn
+      return turn === HOUSE_PLAYER_ID
     }
     
     function continueHouseHand (sum) {
@@ -144,6 +168,7 @@ const BJ = (function () {
         finishRound()
       } else {
         console.log(`Player busted. Sum ${sum}`)
+        askHousePlayerToFlipCard()
         finishRound()
       }
     }
@@ -160,11 +185,16 @@ const BJ = (function () {
     
     function startOwnHand () {
       takePlayingControl()
+      askHousePlayerToFlipCard()
       continueHouseHand(playerSums[HOUSE_PLAYER_ID].soft)
     }
 
     function takePlayingControl () {
       turn = HOUSE_PLAYER_ID
+    }
+
+    function askHousePlayerToFlipCard () {
+      players[HOUSE_PLAYER_ID].flipSecondCard()
     }
     
     function finishRound () {
@@ -174,11 +204,9 @@ const BJ = (function () {
 
     function checkWinner() {
       if (playerSums[PLAYER_ID].soft > 21) return console.log('House wins')
-      const houseSum = playerSums[HOUSE_PLAYER_ID].soft
+      const houseSum = getBestSum(playerSums[HOUSE_PLAYER_ID])
       if (houseSum > 21) return console.log('Player wins')
-      const playerSum = playerSums[PLAYER_ID].hard <= 21 ?
-        playerSums[PLAYER_ID].hard :
-        playerSums[PLAYER_ID].soft
+      const playerSum = getBestSum(playerSums[PLAYER_ID])
       if (playerSum > houseSum) {
         console.log('Player wins!')
       } else if (playerSum < houseSum) {
@@ -186,6 +214,12 @@ const BJ = (function () {
       } else {
         console.log("It's a push!")
       }
+    }
+
+    function getBestSum (playerSum) {
+      return playerSum.hard <= 21 ?
+        playerSum.hard :
+        playerSum.soft
     }
     
     function deactivateRound () {
@@ -277,19 +311,6 @@ const BJ = (function () {
       }
     }
     
-    function createCard (suit, rank) {
-      return {
-        suit: suit.name,
-        rank: rank.figure,
-        value: rank.value,
-        symbol: getCardSymbol(suit, rank)
-      }
-    }
-    
-    function getCardSymbol (suit, rank) {
-      return String.fromCodePoint(suit.aceUnicode + rank.aceIndex)
-    }
-    
     // Durstenfeld version of the Fisher–Yates shuffle algorithm
     // Check https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
     function shuffleCards () {
@@ -321,44 +342,76 @@ const BJ = (function () {
       prepareForRound
     }
   }
+  
+  /*  CARD
+  ----------------------------------------------- */
+  
+  function createCard (suit, rank) {
+    const data = {
+      suit: suit.name,
+      rank: rank.figure,
+      value: rank.value,
+      symbol: getCardSymbol(suit, rank)
+    }
 
+    function createElement () {
+      let cardElement = document.createElement('div')
+      let cardContent = document.createTextNode(data.symbol)
+      cardElement.appendChild(cardContent)
+      cardElement.classList.add(DOM_SELECTORS.card.basic.slice(1))
+      return cardElement
+    }
+    
+    function getValue () {
+      return { ... data.value }
+    }
+
+    function getFrontSelector () {
+      return (suit.name === 'spades' || suit.name === 'clubs') ?
+        DOM_SELECTORS.card.frontBlack :
+        DOM_SELECTORS.card.frontRed
+    }
+
+    function getCardSymbol (suit, rank) {
+      return String.fromCodePoint(suit.aceUnicode + rank.aceIndex)
+    }
+    
+    return {
+      createElement,
+      value: getValue(),
+      frontSelector: getFrontSelector()
+    }
+
+  }
+  
+  
   /*  PLAYER
   ----------------------------------------------- */
-
+  
   function createPlayer (id) {
     const hand = createHand(id)
     let house
-    
-    function addHouse (playerHouse) {
-      house = playerHouse
-    }
     
     function getID () {
       return id
     }
 
+    function addHouse (playerHouse) {
+      house = playerHouse
+    }
+    
     function hit () {
       askForCard()
       sendStateToHouse()
     }
     
-    function askForCard () {
-      const newCard = house.dealCard()
-      newCard && hand.addCard(newCard)
-    }
-    
-    
-    function sendStateToHouse (done = false) {
-      house.checkPlayerState({
-        id,
-        handSums: hand.sums(),
-        done
-      })
-    }
-    
     function stand () {
       const done = true
       sendStateToHouse(done)
+    }
+
+    function flipSecondCard () {
+      hand.flipSecondCard()
     }
     
     function nextRound () {
@@ -368,12 +421,26 @@ const BJ = (function () {
     function emptyHand () {
       hand.empty()
     }
+
+    function askForCard () {
+      const newCard = house.dealCard()
+      newCard && hand.addCard(newCard)
+    }
+    
+    function sendStateToHouse (done = false) {
+      house.checkPlayerState({
+        id,
+        handSums: hand.sums(),
+        done
+      })
+    }
     
     return {
       id: getID(),
       addHouse,
       hit,
       stand,
+      flipSecondCard,
       nextRound,
       emptyHand
     }
@@ -385,14 +452,39 @@ const BJ = (function () {
   function createHand (id) {
     const cards = []
     let handSums = { soft: 0, hard: 0 }
+    const domContainer = selectDomContainer(id)
     
     function addCard (card) {
       cards.push(card)
       updateHandSums()
-
+      renderNew(card)
+      
       // EREASE OR CHANGE
       console.log('player', id, ...cards.map(card => card.symbol))
       //
+    }
+    
+    function sums () {
+      return { ...handSums }
+    }
+
+    function flipSecondCard () {
+      const secondCard = cards.slice(-1)[0]
+      const secondCardElement = domContainer.lastChild.firstChild
+      const secondCardFrontClass = secondCard.frontSelector.slice(1)
+      secondCardElement.classList.replace(
+        DOM_SELECTORS.card.back.slice(1),
+        secondCardFrontClass
+      )
+    }
+    
+    function empty () {
+      emptyCards()
+      emptyDomContainer()
+    }
+    
+    function selectDomContainer (id) {
+      return document.querySelector(DOM_SELECTORS.hand.containerPrefix + id)
     }
     
     function updateHandSums () {
@@ -404,118 +496,75 @@ const BJ = (function () {
       }, { soft: 0, hard: 0 })
     }
     
-    function sums () {
-      return { ...handSums }
+    function renderNew (card) {
+      const newCardElement = getAndStyleCardElement(card)
+      const wrappedCard = wrapCardElement(newCardElement)
+      wrappedCard.classList.add(DOM_SELECTORS.hand.receivedCard.slice(1))
+      domContainer.appendChild(wrappedCard)
     }
     
-    function empty () {
+    function getAndStyleCardElement (card) {
+      const newCardElement = card.createElement()
+      const newCardClass = defineNewCardClass(card)
+      newCardElement.classList.add(newCardClass)
+      return newCardElement
+    }
+
+    function wrapCardElement (cardElement) {
+      const cardContainer = document.createElement('li')
+      cardContainer.appendChild(cardElement)
+      cardContainer.classList.add(DOM_SELECTORS.hand.cardContainer.slice(1))
+      return cardContainer
+    } 
+    
+    function defineNewCardClass (card) {
+      if (isHouse(id) && cards.length === 2) {
+        return DOM_SELECTORS.card.back.slice(1)
+      }
+      else {
+        return card.frontSelector.slice(1)
+      }
+    }
+
+    function emptyCards () {
       cards.splice(0, cards.length)
     }
 
+    function emptyDomContainer () {
+      while (domContainer.lastChild) {
+        domContainer.lastChild.classList.replace(
+          DOM_SELECTORS.hand.receivedCard.slice(1),
+          DOM_SELECTORS.hand.discardedCard.slice(1)
+        )
+        domContainer.removeChild(element.lastChild);
+      }
+    }
+    
     return {
       addCard,
-      empty,
-      sums
+      sums,
+      flipSecondCard,
+      empty
     }
   }
-  
-  // function setupEventListeners () {
-  // }
-
-  // function buildDomElementsObject () {
-  //   selectors.forEach(selector => {
-  //     domElements[selector] = setupElementParameters(selector)
-  //   })
-  // }
-
-
-  // function buildStateObject () {
-  // }
-
-  /*  GAME ENGINE
-  ----------------------------------------------- */
-
-  // function applyClassChange ({ element, classChange: { add, remove } }) {
-  //   element.classList.add(add)
-  //   element.classList.remove(remove)
-  // }
-
-  // function applyContentChange ({ element, animationValues }) {
-  //   element.textContent = animationValues.percent
-  // }
-
-  // function applyStyleChanges ({ element, animationValues }) {
-  //   const {
-  //     rotate = 0,
-  //     translateX = 0,
-  //     translateY = 0,
-  //     opacity = 1,
-  //     scaleX = 1,
-  //     scaleY = 1,
-  //     fontSize = ''
-  //   } = animationValues
-  //   const rotateString = `rotate(${rotate}deg)`
-  //   const translateString = `translate3d(${translateX}px, ${translateY}px, 0px)`
-  //   const scaleString = `scale3D(${scaleX}, ${scaleY}, 1)`
-  //   element.style.opacity = opacity
-  //   element.style.transform =
-  //     rotateString +
-  //     ' ' +
-  //     translateString +
-  //     ' ' +
-  //     scaleString
-  //   if (fontSize) {
-  //     element.style.fontSize = fontSize + 'rem'
-  //   }
-  // }
 
   /*  HELPERS
   ----------------------------------------------- */
+  
+  function isHouse (id) {
+    return id === HOUSE_PLAYER_ID
+  }
 
-  // function debounce (func, delay) {
-  //   let inDebounce
-  //   return function () {
-  //     clearTimeout(inDebounce)
-  //     inDebounce = setTimeout(() => { func() }, delay)
-  //   }
-  // }
-
-  // function flushCss(element) {
-  //   element.offsetHeight
-  // }
-
-  // function throttle(func, limit) {
-  //   let inThrottle = false
-  //   return function () {
-  //     if (!inThrottle) {
-  //       func()
-  //       inThrottle = true
-  //       setTimeout(() => { inThrottle = false }, limit)
-  //     }
-  //   }
-  // }
-
-  // function vhToPx (vh) {
-  //   return vh / 100 * lastScreenSize.height
-  // }
-
-  // function vwToPx (vw) {
-  //   return vw / 100 * lastScreenSize.width
-  // }
-
-  // function inRange ({ limits: { low, high }, value }) {
-  //   return value >= low && value <= high
-  // }
-
-  // function correctToRange ({ limits: { low, high }, value }) {
-  //   if (value <= low) {
-  //     return low
-  //   } else if (value >= high) {
-  //     return high
-  //   } else {
-  //     return value
-  //   }
-  // }
+  function throttle(func, limit) {
+    let inThrottle = false
+    return function () {
+      if (!inThrottle) {
+        func()
+        inThrottle = true
+        setTimeout(() => { inThrottle = false }, limit)
+      }
+    }
+  }
 
   init()
   return gameState
