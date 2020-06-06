@@ -6,10 +6,12 @@
 /* ROOT VARIABLES */
 
 :root {
+  --color-green: #54F08A;
   --color-red: #F05A55;
   --color-black:#404041;
   --color-yellow:#FFD754;
   --color-grey:#C7B1C9;
+  --color-darker-grey:rgb(134, 117, 136);
   }
 
 /* GENERAL DOCUMENT PROPERTIES */
@@ -30,44 +32,20 @@ body {
   font-size: 1rem;
   font-weight: 400;
   line-height: 1.4;
-  background-color: var(--color-red);
+  background-color: var(--color-green);
   color: white;
-}
-
-main {
-  position: relative;
-  width: 80%;
-  height: 80%;
-  left: 10%;
-  top: 10%;
-  background-color: white;
-  border-radius: 50px;
-}
-
-h1 {
-  font-size: 4rem;
-  color: var(--color-grey);
-  text-align: center;
-}
-
-h2 {
-  font-size: 5rem;
-}
-
-h3 {
-  font-size: 3rem;
-}
-
-p {
-  font-size: 2rem;
 }
 
 li {
   list-style: none;
 }
 
+p {
+  font-size: 1.25rem;
+}
+
 a {
-  font-size: 2rem;
+  font-size: 1.25rem;
   text-decoration: none;
   color: inherit;
   cursor: pointer;
@@ -100,33 +78,73 @@ button::-moz-focus-inner {
 
 /* TO COMPLETE */
 
-.hand {
+.container {
   position: absolute;
-  width: 50%;
-  height: 150px;
-  left: 25%;
+  width: 80%;
+  height: 80%;
+  left: 10%;
+  top: 10%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  background-color: white;
+  border-radius: 50px;
+}
+
+.title {
+  font-size: 4rem;
+  color: var(--color-grey);
+  text-align: center;
+}
+
+.house-message {
+  min-height: 2rem;
+  font-size: 2rem;
+  text-align: center;
+  line-height: 2rem;
+  color: var(--color-darker-grey)
+}
+
+.hand {
+  position: relative;
+  width: 60%;
+  height: 25%;
+  min-height: 150px;
+  margin-left: -10%;
   display: flex;
   align-content: center;
   justify-content: center;
-  padding-right: 10%;
 }
 
 .hand--player-0 {
-  top: 20%;
 }
 
 .hand--player-1 {
-  bottom: 10%;
+}
+
+.hand__sums-display {
+  font-size: 2.5rem;
+  text-align: center;
+  color: var(--color-darker-grey);
+}
+
+.hand__cards-stack {
+  position: relative;
+  width: 85%;
+  display: flex;
+  align-content: center;
+  justify-content: center;
 }
 
 .hand__card {
   position: relative;
+  width: 17%;
+  margin-right: -10px;
   overflow: hidden;
-  width: 75px;
   background-color: transparent;
   border-top-left-radius: 10px;
   border-bottom-left-radius: 10px;
-  margin-right: -10px;
 }
 
 .hand__card:last-child {
@@ -142,24 +160,39 @@ button::-moz-focus-inner {
 }
 
 .hand__card-content {
+  position: relative;
   width: 200%;
   height: 100%;
+  display: flex;
+  justify-content: start;
   border-radius: 10px;
-  border: 3px solid white;
+  border: 5px solid white;
+}
+
+.hand__card-flex {
+  position: relative;
+  width: 25%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: baseline; 
+}
+
+.hand__card-data {
+  width: 100%;
+  text-align: center;
+  font-size: 30px;
 }
 
 .hand__card--red {
-  /* color: white;
-  background-color: var(--color-red); */
-  color: transparent;
-  background-color: red;
+  color: white;
+  background-color: var(--color-red);
 }
 
 .hand__card--black {
-  /* color: white;
-  background-color: var(--color-black); */
-  color: transparent;
-  background-color: black;
+  color: white;
+  background-color: var(--color-black);
 }
 
 .hand__card--back {
@@ -169,4 +202,22 @@ button::-moz-focus-inner {
 
 .btn {
 
+}
+
+.footer {
+  position: absolute;
+  bottom: 0;
+  height: 10%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  padding-right: 11%;
+  color: white;
+}
+
+
+.footer__link {
+  text-decoration: underline;
 }
