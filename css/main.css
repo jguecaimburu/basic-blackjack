@@ -6,12 +6,13 @@
 /* ROOT VARIABLES */
 
 :root {
-  --color-green: #54F08A;
+  --color-table: #FF7773;
   --color-red: #F05A55;
   --color-black:#404041;
-  --color-yellow:#FFD754;
+  --color-back:#FFD754;
   --color-grey:#C7B1C9;
-  --color-darker-grey:rgb(134, 117, 136);
+  --color-lighter-grey: #F0D5F2;
+  --color-darker-grey:#958496;
   }
 
 /* GENERAL DOCUMENT PROPERTIES */
@@ -32,7 +33,7 @@ body {
   font-size: 1rem;
   font-weight: 400;
   line-height: 1.4;
-  background-color: var(--color-green);
+  background-color: var(--color-table);
   color: white;
 }
 
@@ -87,59 +88,72 @@ button::-moz-focus-inner {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-evenly;
+  justify-content: space-between;
   background-color: white;
   border-radius: 50px;
 }
 
 .title {
-  font-size: 4rem;
-  color: var(--color-grey);
+  margin-top: 1rem;
+  font-size: 3.5rem;
+  color: var(--color-darker-grey);
   text-align: center;
 }
 
 .house-message {
   min-height: 2rem;
-  font-size: 2rem;
+  margin-top: -4rem;
+  font-size: 1.5rem;
   text-align: center;
-  line-height: 2rem;
+  line-height: 1.5rem;
   color: var(--color-darker-grey)
 }
 
 .hand {
   position: relative;
-  width: 60%;
-  height: 25%;
-  min-height: 150px;
-  margin-left: -10%;
+  width: 50%;
+  height: 10rem;
+  margin-left: -40%;
+  padding-right: 5rem;
   display: flex;
   align-content: center;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .hand--player-0 {
+  margin-top: -5rem;
 }
 
 .hand--player-1 {
+  margin-bottom: 2rem;
 }
 
 .hand__sums-display {
-  font-size: 2.5rem;
+  min-width: 3rem;
+  height: 3rem;
+  padding: 3px 6px 3px 6px;
+  margin-top: auto;
+  margin-bottom: auto;
+  border-radius: 8px;
+  line-height: 2.5rem;
+  font-size: 1.8rem;
   text-align: center;
   color: var(--color-darker-grey);
+  background-color: var(--color-lighter-grey);
+  display: none;
 }
 
 .hand__cards-stack {
   position: relative;
-  width: 85%;
   display: flex;
   align-content: center;
   justify-content: center;
+  margin-left: 3rem;
 }
 
 .hand__card {
   position: relative;
-  width: 17%;
+  width: 3.25rem;
   margin-right: -10px;
   overflow: hidden;
   background-color: transparent;
@@ -161,12 +175,13 @@ button::-moz-focus-inner {
 
 .hand__card-content {
   position: relative;
-  width: 200%;
+  width: 7rem;
   height: 100%;
   display: flex;
   justify-content: start;
-  border-radius: 10px;
-  border: 5px solid white;
+  padding: 5px;
+  border-radius: 15px;
+  border: 6px solid white;
 }
 
 .hand__card-flex {
@@ -197,7 +212,7 @@ button::-moz-focus-inner {
 
 .hand__card--back {
   color: transparent;
-  background-color: var(--color-yellow);
+  background-color: var(--color-back);
 }
 
 .btn {
