@@ -9,42 +9,49 @@ const BJ = (function () {
   const MIN_CARDS_TO_RESHUFFLE = 50
   
   const SUITS = [
-    {name: 'spades', aceUnicode: 0x1F0A1 },
-    {name: 'hearts', aceUnicode: 0x1F0B1 },
-    {name: 'diamonds', aceUnicode: 0x1F0C1 },
-    {name: 'clubs:', aceUnicode: 0x1F0D1 }
+    {name: 'spades', unicode: 0x2660 },
+    {name: 'hearts', unicode: 0x2665 },
+    {name: 'diamonds', unicode: 0x2666 },
+    {name: 'clubs', unicode: 0x2663 }
   ]
   
   const RANKS = [
-    {figure: 'A', value: {soft: 1, hard: 11}, aceIndex: 0},
-    {figure: '2', value: { soft: 2, hard: 2}, aceIndex: 1 },
-    {figure: '3', value: { soft: 3, hard: 3}, aceIndex: 2 },
-    {figure: '4', value: { soft: 4, hard: 4}, aceIndex: 3 },
-    {figure: '5', value: { soft: 5, hard: 5}, aceIndex: 4 },
-    {figure: '6', value: { soft: 6, hard: 6}, aceIndex: 5 },
-    {figure: '7', value: { soft: 7, hard: 7}, aceIndex: 6 },
-    {figure: '8', value: { soft: 8, hard: 8}, aceIndex: 7 },
-    {figure: '9', value: { soft: 9, hard: 9}, aceIndex: 8 },
-    {figure: '10', value: { soft: 10, hard: 10}, aceIndex: 9 },
-    {figure: 'J', value: { soft: 10, hard: 10}, aceIndex: 10 },
-    // aceIndex 11 gets unicode for rank C
-    {figure: 'Q', value: { soft: 10, hard: 10}, aceIndex: 12 },
-    {figure: 'K', value: { soft: 10, hard: 10}, aceIndex: 13 },
+    {figure: 'A', value: {soft: 1, hard: 11} },
+    {figure: '2', value: { soft: 2, hard: 2} },
+    {figure: '3', value: { soft: 3, hard: 3} },
+    {figure: '4', value: { soft: 4, hard: 4} },
+    {figure: '5', value: { soft: 5, hard: 5} },
+    {figure: '6', value: { soft: 6, hard: 6} },
+    {figure: '7', value: { soft: 7, hard: 7} },
+    {figure: '8', value: { soft: 8, hard: 8} },
+    {figure: '9', value: { soft: 9, hard: 9} },
+    {figure: '10', value: { soft: 10, hard: 10} },
+    {figure: 'J', value: { soft: 10, hard: 10} },
+    {figure: 'Q', value: { soft: 10, hard: 10} },
+    {figure: 'K', value: { soft: 10, hard: 10} }
   ]
 
+  // CSS hand selectors depend on these ids
   const HOUSE_PLAYER_ID = 0
   const PLAYER_ID = 1
-  const DEALING_ID = -1
+  const DEALER_ID = -1
   
   const DOM_SELECTORS = {
+    house: {
+      message: '.house-message'
+    },
     hand: {
       containerPrefix: '.hand--player-',
+      cardsStack: '.hand__cards-stack',
+      sumsDisplay: '.hand__sums-display',
       cardContainer: '.hand__card',
       receivedCard: '.hand__card--received',
       discardedCard: '.hand__card--discarded'
     },
     card: {
-      basic: '.hand__card-content',
+      content: '.hand__card-content',
+      flex: '.hand__card-flex',
+      data: '.hand__card-data',
       frontRed: '.hand__card--red',
       frontBlack: '.hand__card--black',
       back: '.hand__card--back'
@@ -79,34 +86,63 @@ const BJ = (function () {
   
   function configureState () {
     gameState.house = createHouse()
-    gameState.housePlayer = createPlayer(HOUSE_PLAYER_ID)
-    gameState.player = createPlayer(PLAYER_ID)
-    gameState.house.addPlayer(gameState.player)
+    gameState.dealer = createDealer(DEALER_ID)
+    gameState.housePlayer = createPlayer({
+      id: HOUSE_PLAYER_ID,
+      isHousePlayer: true
+    })
+    gameState.player = createPlayer({
+      id: PLAYER_ID,
+      isHousePlayer: false
+    })
+
+    gameState.house.addDealer(gameState.dealer)
     gameState.house.addPlayer(gameState.housePlayer)
+    gameState.house.addPlayer(gameState.player)
   }
 
   /*  HOUSE
   ----------------------------------------------- */
 
   function createHouse () {
-    const dealer = createDealer()
+    const HOUSE_PLAYER_ROLE = 'house'
+    const PLAYER_ROLE = 'player'
+    const DEALER_ROLE = 'dealer'
+    
+    const roles = {}
+    let dealer
     const players = {}
-    const playerSums = {}
-    let turn
-    let isRoundActive
+    
+    const state = {
+      turn: '',
+      isRoundActive: false,
+      playerSums: {}
+    }
+
+    const messageDisplayElement = selectMessageDisplay()
     
     function addPlayer (player) {
       players[player.id] = player
+      if (player.isHouse) {
+        roles[HOUSE_PLAYER_ROLE] = player.id
+      } else {
+        roles[PLAYER_ROLE] = player.id
+      }
       player.addHouse(this)
+    }
+
+    function addDealer (dealerObj) {
+      dealer = dealerObj
+      roles[DEALER_ROLE] = dealer.id
     }
     
     function dealCard () {
-      if (isRoundActive) return dealer.dealCard()
+      if (state.isRoundActive) return dealer.dealCard()
     }
     
     // Hit on soft 17 rule is applied
     function checkPlayerState ({ id, handSums, done }) {
-      if (!isRoundActive) return ;
+      if (!state.isRoundActive) return ;
       savePlayerSums({ id, handSums })
       if (!done) {
         if (playerHasSoft21(id, handSums)) {
@@ -125,7 +161,8 @@ const BJ = (function () {
     }
     
     function startNextRound () {
-      if (isRoundActive) return;
+      if (state.isRoundActive) return;
+      clearMessageDisplay()
       cleanTable()
       activateRound()
       takeDealingControl()
@@ -133,14 +170,17 @@ const BJ = (function () {
       dealNewHand()
       checkBlackJack()
     }
+
+    function selectMessageDisplay () {
+      return document.querySelector(DOM_SELECTORS.house.message)
+    }
     
     function savePlayerSums ({ id, handSums }) {
-      playerSums[id] = handSums
+      state.playerSums[id] = handSums
     }
 
     function playerHasSoft21 (id, handSums) {
-      return turn === PLAYER_ID &&
-        id === PLAYER_ID &&
+      return state.turn === PLAYER_ROLE &&
         (handSums.soft === 21 || handSums.hard === 21) 
     }
     
@@ -150,35 +190,42 @@ const BJ = (function () {
     
     
     function isHouseTurn () {
-      return turn === HOUSE_PLAYER_ID
+      return state.turn === HOUSE_PLAYER_ROLE
+    }
+    
+    function isHouse (id) {
+      return id === roles[HOUSE_PLAYER_ROLE]
     }
     
     function continueHouseHand (sum) {
-      console.log('House is', sum)
       if (sum < 17) {
-        players[HOUSE_PLAYER_ID].hit()
+        players[roles[HOUSE_PLAYER_ROLE]].hit()
       } else {
-        players[HOUSE_PLAYER_ID].stand()
+        players[roles[HOUSE_PLAYER_ROLE]].stand()
       }
     }
     
     function playerBust ({ sum, id }) {
       if (isHouse(id)) {
-        console.log(`House busted. Sum ${sum}`)
+        addMessageToDisplay('House busted. ')
         finishRound()
       } else {
-        console.log(`Player busted. Sum ${sum}`)
+        addMessageToDisplay('Player busted. ')
         askHousePlayerToFlipCard()
         finishRound()
       }
     }
+
+    function addMessageToDisplay (message) {
+      messageDisplayElement.textContent += message 
+    }
     
     function playerStands({ sum, id }) {
       if (isHouse(id)) {
-        console.log(`House stands on ${sum}`)
+        addMessageToDisplay(`House stands on ${sum}. `)
         finishRound()
       } else {
-        console.log(`Player stands on ${sum}`)
+        addMessageToDisplay(`Player stands on ${sum}. `)
         startOwnHand()
       }
     }
@@ -186,15 +233,19 @@ const BJ = (function () {
     function startOwnHand () {
       takePlayingControl()
       askHousePlayerToFlipCard()
-      continueHouseHand(playerSums[HOUSE_PLAYER_ID].soft)
+      continueHouseHand(getLastSoftSum(roles[HOUSE_PLAYER_ROLE]))
     }
 
     function takePlayingControl () {
-      turn = HOUSE_PLAYER_ID
+      state.turn = HOUSE_PLAYER_ROLE
     }
 
     function askHousePlayerToFlipCard () {
-      players[HOUSE_PLAYER_ID].flipSecondCard()
+      players[roles[HOUSE_PLAYER_ROLE]].flipSecondCard()
+    }
+
+    function getLastSoftSum (id) {
+      return state.playerSums[id].soft
     }
     
     function finishRound () {
@@ -203,16 +254,18 @@ const BJ = (function () {
     }
 
     function checkWinner() {
-      if (playerSums[PLAYER_ID].soft > 21) return console.log('House wins')
-      const houseSum = getBestSum(playerSums[HOUSE_PLAYER_ID])
-      if (houseSum > 21) return console.log('Player wins')
-      const playerSum = getBestSum(playerSums[PLAYER_ID])
+      if (getLastSoftSum(roles[PLAYER_ROLE]) > 21) {
+        return addMessageToDisplay('House wins!')
+      }
+      const houseSum = getBestSum(state.playerSums[HOUSE_PLAYER_ID])
+      if (houseSum > 21) return addMessageToDisplay('Player wins!')
+      const playerSum = getBestSum(state.playerSums[PLAYER_ID])
       if (playerSum > houseSum) {
-        console.log('Player wins!')
+        addMessageToDisplay('Player wins!')
       } else if (playerSum < houseSum) {
-        console.log('House wins!')
+        addMessageToDisplay('House wins!')
       } else {
-        console.log("It's a push!")
+        addMessageToDisplay("It's a push!")
       }
     }
 
@@ -223,7 +276,11 @@ const BJ = (function () {
     }
     
     function deactivateRound () {
-      isRoundActive = false
+      state.isRoundActive = false
+    }
+
+    function clearMessageDisplay () {
+      messageDisplayElement.textContent = ''
     }
     
     function cleanTable () {
@@ -233,11 +290,11 @@ const BJ = (function () {
     }
     
     function activateRound () {
-      isRoundActive = true
+      state.isRoundActive = true
     }
     
     function takeDealingControl () {
-      turn = DEALING_ID
+      state.turn = DEALER_ROLE
     }
     
     function prepareDealer () {
@@ -246,28 +303,35 @@ const BJ = (function () {
     
     function dealNewHand () {
       for (let i = 1; i <= 2; i++) {
-        for (let id = PLAYER_ID; id >= 0; id--) {
+        for (const id of listPlayersIds()) {
           players[id].hit()
-        }
+        }      
       }
+    }
+
+    // Player goes first in dealing and cleaning operations.
+    function listPlayersIds () {
+      return [roles[PLAYER_ROLE], roles[HOUSE_PLAYER_ROLE]]
     }
     
     function checkBlackJack () {
-      for (let id = PLAYER_ID; id >= 0; id--) {
-        if (playerSums[id].hard === 21) {
-          console.log('BlackJack!')
+      for (const id of listPlayersIds()) {
+        if (state.playerSums[id].hard === 21) {
+          addMessageToDisplay('BlackJack! ')
+          askHousePlayerToFlipCard()
           return finishRound()
         }
       }
       givePlayerControl()
     }
-
-    function givePlayerControl () {
-      turn = PLAYER_ID
-    }
     
+    function givePlayerControl () {
+      state.turn = PLAYER_ROLE
+    }
+
     return {
       addPlayer,
+      addDealer,
       dealCard,
       checkPlayerState,
       startNextRound
@@ -277,10 +341,14 @@ const BJ = (function () {
   /*  DEALER
   ----------------------------------------------- */
   
-  function createDealer () {
+  function createDealer (id) {
     const cards = []
     let reshuffle
     createNewCards()
+
+    function getID() {
+      return id
+    }
     
     function createNewCards () {
       emptyCards()
@@ -332,12 +400,11 @@ const BJ = (function () {
     function dealCard () {
       let topCard = cards.pop()
       if (cards.length < MIN_CARDS_TO_RESHUFFLE) reshuffle = true
-      // EREASE OR CHANGE
-      console.log(cards.length)
       return topCard
     }
     
     return {
+      id: getID(),
       dealCard,
       prepareForRound
     }
@@ -349,17 +416,35 @@ const BJ = (function () {
   function createCard (suit, rank) {
     const data = {
       suit: suit.name,
+      suitSymbol: getCardSymbol(suit),
       rank: rank.figure,
-      value: rank.value,
-      symbol: getCardSymbol(suit, rank)
+      value: rank.value
     }
 
     function createElement () {
-      let cardElement = document.createElement('div')
-      let cardContent = document.createTextNode(data.symbol)
-      cardElement.appendChild(cardContent)
-      cardElement.classList.add(DOM_SELECTORS.card.basic.slice(1))
+      const cardElement = document.createElement('div')
+      const cardFlexElement = createCardFlexElement()
+      cardElement.appendChild(cardFlexElement)
+      cardElement.classList.add(DOM_SELECTORS.card.content.slice(1))
       return cardElement
+    }
+    
+    function createCardFlexElement () {
+      const cardFlex = document.createElement('div')
+      const rankElement = createDataElement(data.rank)
+      const suitElement = createDataElement(data.suitSymbol)
+      cardFlex.appendChild(rankElement)
+      cardFlex.appendChild(suitElement)
+      cardFlex.classList.add(DOM_SELECTORS.card.flex.slice(1))
+      return cardFlex
+    }
+    
+    function createDataElement (text) {
+      const cardDataElement = document.createElement('p')
+      const dataNode = document.createTextNode(text)
+      cardDataElement.appendChild(dataNode)
+      cardDataElement.classList.add(DOM_SELECTORS.card.data.slice(1))
+      return cardDataElement
     }
     
     function getValue () {
@@ -373,7 +458,7 @@ const BJ = (function () {
     }
 
     function getCardSymbol (suit, rank) {
-      return String.fromCodePoint(suit.aceUnicode + rank.aceIndex)
+      return String.fromCodePoint(suit.unicode)
     }
     
     return {
@@ -388,8 +473,8 @@ const BJ = (function () {
   /*  PLAYER
   ----------------------------------------------- */
   
-  function createPlayer (id) {
-    const hand = createHand(id)
+  function createPlayer ({ id, isHousePlayer }) {
+    const hand = createHand(id, isHousePlayer)
     let house
     
     function getID () {
@@ -422,6 +507,10 @@ const BJ = (function () {
       hand.empty()
     }
 
+    function isHouse () {
+      return isHousePlayer
+    }
+
     function askForCard () {
       const newCard = house.dealCard()
       newCard && hand.addCard(newCard)
@@ -442,26 +531,27 @@ const BJ = (function () {
       stand,
       flipSecondCard,
       nextRound,
-      emptyHand
+      emptyHand,
+      isHouse: isHouse()
     }
   }
   
   /*  HAND
   ----------------------------------------------- */
   
-  function createHand (id) {
+  function createHand (id, isHouseHand = false) {
     const cards = []
     let handSums = { soft: 0, hard: 0 }
-    const domContainer = selectDomContainer(id)
     
+    const domContainer = selectDomContainer(id)
+    const handElements = {}
+    fillDomContainer()
+
     function addCard (card) {
       cards.push(card)
-      updateHandSums()
+      updateHandSums(card)
       renderNew(card)
-      
-      // EREASE OR CHANGE
-      console.log('player', id, ...cards.map(card => card.symbol))
-      //
+      displayNewSums()
     }
     
     function sums () {
@@ -470,7 +560,7 @@ const BJ = (function () {
 
     function flipSecondCard () {
       const secondCard = cards.slice(-1)[0]
-      const secondCardElement = domContainer.lastChild.firstChild
+      const secondCardElement = handElements.cardsStack.lastChild.firstChild
       const secondCardFrontClass = secondCard.frontSelector.slice(1)
       secondCardElement.classList.replace(
         DOM_SELECTORS.card.back.slice(1),
@@ -480,27 +570,52 @@ const BJ = (function () {
     
     function empty () {
       emptyCards()
-      emptyDomContainer()
+      resetSums()
+      emptyCardsStackElement()
     }
     
     function selectDomContainer (id) {
       return document.querySelector(DOM_SELECTORS.hand.containerPrefix + id)
     }
-    
-    function updateHandSums () {
-      handSums = cards.reduce((sums, card) => {
+
+    function fillDomContainer () {
+      handElements.sumsDisplay = createSumsDisplayElement()
+      handElements.cardsStack = createCardsStackElement()
+      domContainer.appendChild(handElements.sumsDisplay)
+      domContainer.appendChild(handElements.cardsStack)
+    }
+
+    function createSumsDisplayElement () {
+      const sumsDisplayElement = document.createElement('p')
+      const sumsTextNode = document.createTextNode('')
+      sumsDisplayElement.classList.add(DOM_SELECTORS.hand.sumsDisplay.slice(1))
+      sumsDisplayElement.appendChild(sumsTextNode)
+      return sumsDisplayElement
+    }
+
+    function createCardsStackElement () {
+      const cardsStackElement = document.createElement('ul')
+      cardsStackElement.classList.add(DOM_SELECTORS.hand.cardsStack.slice(1))
+      return cardsStackElement
+    }
+
+    function updateHandSums (card) {
+      if (handSums.soft === handSums.hard) {
         for (const type in card.value) {
-          sums[type] += card.value[type]
+          handSums[type] += card.value[type]
         }
-        return sums
-      }, { soft: 0, hard: 0 })
+      } else {
+        for (const type in handSums) {
+          handSums[type] += card.value.soft
+        }  
+      }
     }
     
     function renderNew (card) {
       const newCardElement = getAndStyleCardElement(card)
       const wrappedCard = wrapCardElement(newCardElement)
       wrappedCard.classList.add(DOM_SELECTORS.hand.receivedCard.slice(1))
-      domContainer.appendChild(wrappedCard)
+      handElements.cardsStack.appendChild(wrappedCard)
     }
     
     function getAndStyleCardElement (card) {
@@ -518,7 +633,7 @@ const BJ = (function () {
     } 
     
     function defineNewCardClass (card) {
-      if (isHouse(id) && cards.length === 2) {
+      if (isHouseHand && cards.length === 2) {
         return DOM_SELECTORS.card.back.slice(1)
       }
       else {
@@ -526,17 +641,26 @@ const BJ = (function () {
       }
     }
 
+    function displayNewSums () {
+      const sumsText = `Soft: ${handSums.soft}, hard: ${handSums.hard}`
+      handElements.sumsDisplay.textContent = sumsText
+    }
+
     function emptyCards () {
       cards.splice(0, cards.length)
     }
 
-    function emptyDomContainer () {
-      while (domContainer.lastChild) {
-        domContainer.lastChild.classList.replace(
+    function resetSums () {
+      handSums = { soft: 0, hard: 0 }
+    }
+
+    function emptyCardsStackElement () {
+      while (handElements.cardsStack.lastChild) {
+        handElements.cardsStack.lastChild.classList.replace(
           DOM_SELECTORS.hand.receivedCard.slice(1),
           DOM_SELECTORS.hand.discardedCard.slice(1)
         )
-        domContainer.removeChild(element.lastChild);
+        handElements.cardsStack.removeChild(handElements.cardsStack.lastChild);
       }
     }
     
@@ -551,9 +675,6 @@ const BJ = (function () {
   /*  HELPERS
   ----------------------------------------------- */
   
-  function isHouse (id) {
-    return id === HOUSE_PLAYER_ID
-  }
 
   function throttle(func, limit) {
     let inThrottle = false
