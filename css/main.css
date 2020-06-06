@@ -113,7 +113,7 @@ button::-moz-focus-inner {
   position: relative;
   width: 50%;
   height: 10rem;
-  margin-left: -40%;
+  margin-left: -20%;
   padding-right: 5rem;
   display: flex;
   align-content: center;
@@ -125,7 +125,7 @@ button::-moz-focus-inner {
 }
 
 .hand--player-1 {
-  margin-bottom: 2rem;
+  margin-bottom: 3.3rem;
 }
 
 .hand__sums-display {
@@ -153,7 +153,7 @@ button::-moz-focus-inner {
 
 .hand__card {
   position: relative;
-  width: 3.25rem;
+  width: 3.9rem;
   margin-right: -10px;
   overflow: hidden;
   background-color: transparent;
@@ -215,8 +215,50 @@ button::-moz-focus-inner {
   background-color: var(--color-back);
 }
 
-.btn {
+.interface {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  width: 20%;
+  height: 30%;
+}
 
+.btn {
+  position: absolute;
+  left: 0;
+  height: 3rem;
+  width: 10rem;
+  padding: 3px 6px 3px 6px;
+  border-radius: 1.5rem;
+  border: 2px solid var(--color-grey);
+  font-size: 1.7rem;
+  color: var(--color-darker-grey);
+  background-color: white;
+  text-align: center;
+  display: none;
+}
+
+.btn:hover {
+  cursor: pointer;
+}
+
+.btn:hover,
+.btn:focus {
+  background-color: var(--color-lighter-grey);
+}
+
+.btn--hit {
+  top: 2rem;
+}
+
+.btn--stand {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.btn--deal {
+  bottom: 2rem;
+  display: block;
 }
 
 .footer {
