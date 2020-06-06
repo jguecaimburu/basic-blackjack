@@ -150,7 +150,7 @@ const BJ = (function () {
         } 
         if (handSums.soft <= 7) return playerActive({ sum: handSums.soft, id })
         if (handSums.soft <= 11) return playerActive({ sum: handSums.hard, id })
-        if (handSums.soft < 21) return playerActive({ sum: handSums.soft, id })
+        if (handSums.soft <= 21) return playerActive({ sum: handSums.soft, id })
         playerBust({ sum: handSums.soft, id })
       } else {
         playerStands({
@@ -163,6 +163,7 @@ const BJ = (function () {
     function startNextRound () {
       if (state.isRoundActive) return;
       clearMessageDisplay()
+      askAllPlayersToHideSums()
       cleanTable()
       activateRound()
       takeDealingControl()
@@ -235,9 +236,14 @@ const BJ = (function () {
       askHousePlayerToFlipCard()
       continueHouseHand(getLastSoftSum(roles[HOUSE_PLAYER_ROLE]))
     }
-
+    
     function takePlayingControl () {
       state.turn = HOUSE_PLAYER_ROLE
+      askPlayerToShowSums(roles[HOUSE_PLAYER_ROLE])
+    }
+    
+    function askPlayerToShowSums (id) {
+      players[id].showHandSums()
     }
 
     function askHousePlayerToFlipCard () {
@@ -249,10 +255,17 @@ const BJ = (function () {
     }
     
     function finishRound () {
+      askAllPlayersToShowSums()
       checkWinner()
       deactivateRound()
     }
 
+    function askAllPlayersToShowSums () {
+      for (const id of listPlayersIds()) {
+        askPlayerToShowSums(id)
+      }
+    }
+    
     function checkWinner() {
       if (getLastSoftSum(roles[PLAYER_ROLE]) > 21) {
         return addMessageToDisplay('House wins!')
@@ -278,11 +291,17 @@ const BJ = (function () {
     function deactivateRound () {
       state.isRoundActive = false
     }
-
+    
     function clearMessageDisplay () {
       messageDisplayElement.textContent = ''
     }
     
+    function askAllPlayersToHideSums () {
+      for (const id of listPlayersIds()) {
+        players[id].hideHandSums()
+      }
+    }
+
     function cleanTable () {
       for (let id = PLAYER_ID; id >= 0; id--) {
         players[id].emptyHand()
@@ -296,6 +315,7 @@ const BJ = (function () {
     function takeDealingControl () {
       state.turn = DEALER_ROLE
     }
+
     
     function prepareDealer () {
       dealer.prepareForRound()
@@ -327,7 +347,9 @@ const BJ = (function () {
     
     function givePlayerControl () {
       state.turn = PLAYER_ROLE
+      askPlayerToShowSums(roles[PLAYER_ROLE])
     }
+
 
     return {
       addPlayer,
@@ -502,6 +524,14 @@ const BJ = (function () {
     function nextRound () {
       house.startNextRound()
     }
+
+    function showHandSums() {
+      hand.showSums()
+    }
+
+    function hideHandSums() {
+      hand.hideSums()
+    }
     
     function emptyHand () {
       hand.empty()
@@ -530,6 +560,8 @@ const BJ = (function () {
       hit,
       stand,
       flipSecondCard,
+      showHandSums,
+      hideHandSums,
       nextRound,
       emptyHand,
       isHouse: isHouse()
@@ -566,6 +598,14 @@ const BJ = (function () {
         DOM_SELECTORS.card.back.slice(1),
         secondCardFrontClass
       )
+    }
+
+    function showSums () {
+      handElements.sumsDisplay.style.display = 'block'
+    }
+
+    function hideSums() {
+      handElements.sumsDisplay.style.display = 'none'
     }
     
     function empty () {
@@ -642,7 +682,12 @@ const BJ = (function () {
     }
 
     function displayNewSums () {
-      const sumsText = `Soft: ${handSums.soft}, hard: ${handSums.hard}`
+      let sumsText
+      if ((handSums.soft === handSums.hard) || handSums.hard > 21 ) {
+        sumsText = `${handSums.soft}`
+      } else {
+        sumsText = `${handSums.soft} or ${handSums.hard}`
+      }
       handElements.sumsDisplay.textContent = sumsText
     }
 
@@ -668,6 +713,8 @@ const BJ = (function () {
       addCard,
       sums,
       flipSecondCard,
+      showSums,
+      hideSums,
       empty
     }
   }
