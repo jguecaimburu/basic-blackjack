@@ -59,47 +59,71 @@ const BJ = (function () {
     buttons: {
       hit: '.btn--hit',
       stand: '.btn--stand',
-      nextRound: 'btn--deal'
+      nextRound: '.btn--deal'
     }
   }
-    
+
+  const BTN_THROTTLE_TIME_MS = 400
+  const AUTO_DEALING_DELAY_MS = 600
+  let AUTO_HIT_IN_THROTTLE = false    
   
 
   /*  GLOBALS
   ----------------------------------------------- */
 
   const gameState = {}
-  
+  let house
+  let dealer
+  let housePlayer
+  let player
+  let gameInterface
 
   /*  CONSTRUCTION
   ----------------------------------------------- */
 
   function init () {
-    configureState()
-    // setupEventListeners()
-    
+    buildGameObjects()
+    buildGameInterface()
+    connectInterface()
   }
 
   
-  /*  SETUP
+  /*  BUILD GAME OBJECTS
   ----------------------------------------------- */
   
-  function configureState () {
-    gameState.house = createHouse()
-    gameState.dealer = createDealer(DEALER_ID)
-    gameState.housePlayer = createPlayer({
+  function buildGameObjects () {
+    house = createHouse()
+    dealer = createDealer(DEALER_ID)
+    housePlayer = createPlayer({
       id: HOUSE_PLAYER_ID,
       isHousePlayer: true
     })
-    gameState.player = createPlayer({
+    player = createPlayer({
       id: PLAYER_ID,
       isHousePlayer: false
     })
-
-    gameState.house.addDealer(gameState.dealer)
-    gameState.house.addPlayer(gameState.housePlayer)
-    gameState.house.addPlayer(gameState.player)
+    house.addDealer(dealer)
+    house.addPlayer(housePlayer)
+    house.addPlayer(player)
   }
+
+  /*  BUILD GAME INTERFACE
+  ----------------------------------------------- */
+
+  function buildGameInterface () {
+    gameInterface = createInterface()
+  }
+
+  /*  CONNECT INTERFACE
+  ----------------------------------------------- */
+
+  function connectInterface () {
+    house.addInterface(gameInterface)
+    house.connectInterface()
+  }
+
+  /*  GAME OBJECT FACTORIES
+  ----------------------------------------------- */
 
   /*  HOUSE
   ----------------------------------------------- */
@@ -120,6 +144,7 @@ const BJ = (function () {
     }
 
     const messageDisplayElement = selectMessageDisplay()
+    let userInterface
     
     function addPlayer (player) {
       players[player.id] = player
@@ -134,6 +159,17 @@ const BJ = (function () {
     function addDealer (dealerObj) {
       dealer = dealerObj
       roles[DEALER_ROLE] = dealer.id
+    }
+
+    function addInterface (interfaceObject) {
+      userInterface = interfaceObject
+    }
+
+    function connectInterface () {
+      userInterface.connectPlayerToGameActions(
+        players[roles[PLAYER_ROLE]]
+      )
+      userInterface.connectToNextRoundBtn(this)
     }
     
     function dealCard () {
@@ -212,6 +248,7 @@ const BJ = (function () {
         finishRound()
       } else {
         addMessageToDisplay('Player busted. ')
+        hideGameActions()
         askHousePlayerToFlipCard()
         finishRound()
       }
@@ -240,10 +277,15 @@ const BJ = (function () {
     function takePlayingControl () {
       state.turn = HOUSE_PLAYER_ROLE
       askPlayerToShowSums(roles[HOUSE_PLAYER_ROLE])
+      hideGameActions()
     }
     
     function askPlayerToShowSums (id) {
       players[id].showHandSums()
+    }
+
+    function hideGameActions () {
+      userInterface.hideGameActions()
     }
 
     function askHousePlayerToFlipCard () {
@@ -290,6 +332,11 @@ const BJ = (function () {
     
     function deactivateRound () {
       state.isRoundActive = false
+      showNextRoundBtn()
+    }
+
+    function showNextRoundBtn() {
+      userInterface.showNextRoundBtn()
     }
     
     function clearMessageDisplay () {
@@ -310,6 +357,11 @@ const BJ = (function () {
     
     function activateRound () {
       state.isRoundActive = true
+      hideNextRoundBtn()
+    }
+    
+    function hideNextRoundBtn () {
+      userInterface.hideNextRoundBtn()
     }
     
     function takeDealingControl () {
@@ -348,15 +400,22 @@ const BJ = (function () {
     function givePlayerControl () {
       state.turn = PLAYER_ROLE
       askPlayerToShowSums(roles[PLAYER_ROLE])
+      showGameActions()
+    }
+
+    function showGameActions () {
+      userInterface.showGameActions()
     }
 
 
     return {
       addPlayer,
       addDealer,
+      addInterface,
+      connectInterface,
+      startNextRound,
       dealCard,
-      checkPlayerState,
-      startNextRound
+      checkPlayerState
     }
   }
 
@@ -520,10 +579,6 @@ const BJ = (function () {
     function flipSecondCard () {
       hand.flipSecondCard()
     }
-    
-    function nextRound () {
-      house.startNextRound()
-    }
 
     function showHandSums() {
       hand.showSums()
@@ -562,7 +617,6 @@ const BJ = (function () {
       flipSecondCard,
       showHandSums,
       hideHandSums,
-      nextRound,
       emptyHand,
       isHouse: isHouse()
     }
@@ -719,23 +773,115 @@ const BJ = (function () {
     }
   }
 
-  /*  HELPERS
+  /*  INTERFACE FACTORY
   ----------------------------------------------- */
-  
 
-  function throttle(func, limit) {
-    let inThrottle = false
-    return function () {
-      if (!inThrottle) {
-        func()
-        inThrottle = true
-        setTimeout(() => { inThrottle = false }, limit)
+  function createInterface() {
+    const btnElements = selectBtns()
+    addKeyboardListeners()
+
+    function connectPlayerToGameActions(player) {
+      connectHit(player)
+      connectStand(player)
+    }
+
+    function connectToNextRoundBtn(house) {
+      btnElements.nextRoundBtn.addEventListener(
+        'click',
+        throttle(() => house.startNextRound(), BTN_THROTTLE_TIME_MS)
+      )
+    }
+
+    function showGameActions() {
+      btnElements.hitBtn.style.display = 'block'
+      btnElements.standBtn.style.display = 'block'
+    }
+
+    function hideGameActions() {
+      btnElements.hitBtn.style.display = 'none'
+      btnElements.standBtn.style.display = 'none'
+    }
+
+    function showNextRoundBtn() {
+      btnElements.nextRoundBtn.style.display = 'block'
+    }
+
+    function hideNextRoundBtn() {
+      btnElements.nextRoundBtn.style.display = 'none'
+    }
+
+    function selectBtns() {
+      const hitBtn = document.querySelector(DOM_SELECTORS.buttons.hit)
+      const standBtn = document.querySelector(DOM_SELECTORS.buttons.stand)
+      const nextRoundBtn = document.querySelector(DOM_SELECTORS.buttons.nextRound)
+      return {
+        hitBtn,
+        standBtn,
+        nextRoundBtn
       }
+    }
+
+    function addKeyboardListeners() {
+      const aKeycode = 65
+      const sKeycode = 83
+      const dKeycode = 68
+
+      document.onkeydown = throttle((e) => {
+        e = e || window.event
+        switch (e.keyCode) {
+          case aKeycode:
+            btnElements.hitBtn.click()
+            break
+          case sKeycode:
+            btnElements.standBtn.click()
+            break
+          case dKeycode:
+            btnElements.nextRoundBtn.click()
+            break
+        }
+      }, BTN_THROTTLE_TIME_MS)
+    }
+
+    function throttle(func, limit) {
+      let inThrottle = false
+      return function () {
+        if (!inThrottle) {
+          func()
+          inThrottle = true
+          setTimeout(() => { inThrottle = false }, limit)
+        }
+      }
+    }
+
+    function connectHit(player) {
+      btnElements.hitBtn.addEventListener(
+        'click',
+        throttle(() => player.hit(), BTN_THROTTLE_TIME_MS)
+      )
+    }
+
+    function connectStand(player) {
+      btnElements.standBtn.addEventListener(
+        'click',
+        throttle(() => player.stand(), BTN_THROTTLE_TIME_MS)
+      )
+    }
+
+    return {
+      connectPlayerToGameActions,
+      connectToNextRoundBtn,
+      showGameActions,
+      hideGameActions,
+      showNextRoundBtn,
+      hideNextRoundBtn
     }
   }
 
+  /*  EXECUTION
+  ----------------------------------------------- */
+  
   init()
-  return gameState
+
 }())
 
 console.log('Vegas bb!')
