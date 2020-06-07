@@ -75,16 +75,15 @@ button::-moz-focus-inner {
   overflow: hidden;
 }
 
-/* SPECIFIC */
-
-/* TO COMPLETE */
+/* TABLE LAYOUT */
 
 .container {
-  position: absolute;
+  position: relative;
   width: 80%;
+  max-width: 70rem;
   height: 80%;
-  left: 10%;
   top: 10%;
+  margin: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -113,11 +112,6 @@ button::-moz-focus-inner {
   position: relative;
   width: 50%;
   height: 10rem;
-  margin-left: -20%;
-  padding-right: 5rem;
-  display: flex;
-  align-content: center;
-  justify-content: flex-end;
 }
 
 .hand--player-0 {
@@ -128,12 +122,15 @@ button::-moz-focus-inner {
   margin-bottom: 3.3rem;
 }
 
+/* HAND */
+
 .hand__sums-display {
+  position: absolute;
+  top: 5%;
+  left: -25%;
   min-width: 3rem;
   height: 3rem;
   padding: 3px 6px 3px 6px;
-  margin-top: auto;
-  margin-bottom: auto;
   border-radius: 8px;
   line-height: 2.5rem;
   font-size: 1.8rem;
@@ -144,7 +141,8 @@ button::-moz-focus-inner {
 }
 
 .hand__cards-stack {
-  position: relative;
+  position: absolute;
+  height: 100%;
   display: flex;
   align-content: center;
   justify-content: center;
@@ -155,22 +153,42 @@ button::-moz-focus-inner {
   position: relative;
   width: 3.9rem;
   margin-right: -10px;
-  overflow: hidden;
+  overflow: visible;
   background-color: transparent;
   border-top-left-radius: 10px;
   border-bottom-left-radius: 10px;
 }
 
-.hand__card:last-child {
-  overflow: visible;
+.hand__card--received {
+  animation: receive-card 500ms ease-out;
+  animation-fill-mode: forwards;
 }
 
-.hand__card--received {
-  
+@keyframes receive-card {
+  from {
+		transform: scaleX(0);
+    opacity: 0.9;
+	}
+	to {
+		transform: scaleX(1);
+    opacity: 1;
+	}
 }
 
 .hand__card--discarded {
-  
+  animation: discard-card 500ms ease-out;
+  animation-fill-mode: forwards;
+}
+
+@keyframes discard-card {
+  from {
+		transform: scaleX(1);
+    opacity: 1;
+	}
+	to {
+		transform: scaleX(0);
+    opacity: 0.8;
+	}
 }
 
 .hand__card-content {
@@ -215,10 +233,12 @@ button::-moz-focus-inner {
   background-color: var(--color-back);
 }
 
+/* INTERFACE */
+
 .interface {
   position: absolute;
   bottom: 1rem;
-  right: 1rem;
+  right: 10%;
   width: 20%;
   height: 30%;
 }
@@ -260,6 +280,8 @@ button::-moz-focus-inner {
   bottom: 2rem;
   display: block;
 }
+
+/* FOOTER */
 
 .footer {
   position: absolute;
