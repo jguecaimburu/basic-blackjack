@@ -214,13 +214,14 @@ const BJ = (function () {
     
     function startNextRound () {
       if (state.isRoundActive) return;
+      activateRound()
       clearLastRound()
     }
 
     function informSecondCard (id) {
       if (isHouse(id)) checkBlackJack()
     }
-
+    
     function informEmptyHand (id) {
       if (isHouse(id)) startRound()
     }
@@ -363,7 +364,6 @@ const BJ = (function () {
     }
 
     function startRound () {
-      activateRound()
       takeDealingControl()
       prepareDealer()
       dealNewHand()
