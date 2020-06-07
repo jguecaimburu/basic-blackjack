@@ -63,9 +63,9 @@ const BJ = (function () {
     }
   }
 
-  const BTN_THROTTLE_TIME_MS = 400
+  const BTN_THROTTLE_TIME_MS = 300
   const AUTO_DEALING_DELAY_MS = 600
-  let AUTO_HIT_IN_THROTTLE = false    
+  const CLEAN_DELAY_MS = 800   
   
 
   /*  GLOBALS
@@ -145,7 +145,23 @@ const BJ = (function () {
 
     const messageDisplayElement = selectMessageDisplay()
     let userInterface
-    
+
+    let throttledAutoHit = (function () {
+      let lastCallTime = 0
+      const playerQueue = []
+      return function throttledAutoHit (player = '') {
+        if (player) playerQueue.push(player)
+        let now = Date.now()
+        let timeFromLastCall = now - lastCallTime
+        if (timeFromLastCall > AUTO_DEALING_DELAY_MS) {
+          lastCallTime = now
+          playerQueue.shift().hit()
+        } else {
+          setTimeout(() => { throttledAutoHit() }, AUTO_DEALING_DELAY_MS)
+        }
+      }
+    })()
+
     function addPlayer (player) {
       players[player.id] = player
       if (player.isHouse) {
@@ -198,14 +214,15 @@ const BJ = (function () {
     
     function startNextRound () {
       if (state.isRoundActive) return;
-      clearMessageDisplay()
-      askAllPlayersToHideSums()
-      cleanTable()
-      activateRound()
-      takeDealingControl()
-      prepareDealer()
-      dealNewHand()
-      checkBlackJack()
+      clearLastRound()
+    }
+
+    function informSecondCard (id) {
+      if (isHouse(id)) checkBlackJack()
+    }
+
+    function informEmptyHand (id) {
+      if (isHouse(id)) startRound()
     }
 
     function selectMessageDisplay () {
@@ -236,7 +253,7 @@ const BJ = (function () {
     
     function continueHouseHand (sum) {
       if (sum < 17) {
-        players[roles[HOUSE_PLAYER_ROLE]].hit()
+        throttledAutoHit(players[roles[HOUSE_PLAYER_ROLE]])
       } else {
         players[roles[HOUSE_PLAYER_ROLE]].stand()
       }
@@ -338,6 +355,19 @@ const BJ = (function () {
     function showNextRoundBtn() {
       userInterface.showNextRoundBtn()
     }
+
+    function clearLastRound () {
+      clearMessageDisplay()
+      askAllPlayersToHideSums()
+      cleanTable()
+    }
+
+    function startRound () {
+      activateRound()
+      takeDealingControl()
+      prepareDealer()
+      dealNewHand()
+    }
     
     function clearMessageDisplay () {
       messageDisplayElement.textContent = ''
@@ -350,7 +380,7 @@ const BJ = (function () {
     }
 
     function cleanTable () {
-      for (let id = PLAYER_ID; id >= 0; id--) {
+      for (const id of listPlayersIds()) {
         players[id].emptyHand()
       }
     }
@@ -376,7 +406,7 @@ const BJ = (function () {
     function dealNewHand () {
       for (let i = 1; i <= 2; i++) {
         for (const id of listPlayersIds()) {
-          players[id].hit()
+          throttledAutoHit(players[id])
         }      
       }
     }
@@ -414,6 +444,8 @@ const BJ = (function () {
       addInterface,
       connectInterface,
       startNextRound,
+      informSecondCard,
+      informEmptyHand,
       dealCard,
       checkPlayerState
     }
@@ -569,6 +601,7 @@ const BJ = (function () {
     function hit () {
       askForCard()
       sendStateToHouse()
+      informIfSecondCard()
     }
     
     function stand () {
@@ -589,7 +622,7 @@ const BJ = (function () {
     }
     
     function emptyHand () {
-      hand.empty()
+      hand.empty(this)
     }
 
     function isHouse () {
@@ -608,6 +641,14 @@ const BJ = (function () {
         done
       })
     }
+
+    function informIfSecondCard () {
+      if (hand.haveTwoCards()) house.informSecondCard(id)
+    }
+
+    function informEmptyHand () {
+      house.informEmptyHand(id)
+    }
     
     return {
       id: getID(),
@@ -618,6 +659,7 @@ const BJ = (function () {
       showHandSums,
       hideHandSums,
       emptyHand,
+      informEmptyHand,
       isHouse: isHouse()
     }
   }
@@ -661,11 +703,15 @@ const BJ = (function () {
     function hideSums() {
       handElements.sumsDisplay.style.display = 'none'
     }
+
+    function haveTwoCards () {
+      return cards.length === 2
+    }
     
-    function empty () {
+    function empty (player) {
       emptyCards()
       resetSums()
-      emptyCardsStackElement()
+      emptyCardsStackElement(player)
     }
     
     function selectDomContainer (id) {
@@ -673,10 +719,10 @@ const BJ = (function () {
     }
 
     function fillDomContainer () {
-      handElements.sumsDisplay = createSumsDisplayElement()
       handElements.cardsStack = createCardsStackElement()
-      domContainer.appendChild(handElements.sumsDisplay)
+      handElements.sumsDisplay = createSumsDisplayElement()
       domContainer.appendChild(handElements.cardsStack)
+      domContainer.appendChild(handElements.sumsDisplay)
     }
 
     function createSumsDisplayElement () {
@@ -753,14 +799,19 @@ const BJ = (function () {
       handSums = { soft: 0, hard: 0 }
     }
 
-    function emptyCardsStackElement () {
-      while (handElements.cardsStack.lastChild) {
-        handElements.cardsStack.lastChild.classList.replace(
+    function emptyCardsStackElement (player) {
+      for (const cardElement of handElements.cardsStack.childNodes) {
+        cardElement.classList.replace(
           DOM_SELECTORS.hand.receivedCard.slice(1),
           DOM_SELECTORS.hand.discardedCard.slice(1)
         )
-        handElements.cardsStack.removeChild(handElements.cardsStack.lastChild);
       }
+      setTimeout(() => {
+        while (handElements.cardsStack.lastChild) {
+          handElements.cardsStack.removeChild(handElements.cardsStack.lastChild)
+        }
+        player.informEmptyHand()
+      }, CLEAN_DELAY_MS)
     }
     
     return {
@@ -769,6 +820,7 @@ const BJ = (function () {
       flipSecondCard,
       showSums,
       hideSums,
+      haveTwoCards,
       empty
     }
   }
