@@ -154,7 +154,7 @@ const BJ = (function () {
         let timeFromLastCall = now - lastCallTime
         if (timeFromLastCall > AUTO_DEALING_DELAY_MS) {
           lastCallTime = now
-          playerQueue.shift().hit()
+          playerQueue.shift().hit(true)
         } else {
           setTimeout(() => { throttledAutoHit() }, AUTO_DEALING_DELAY_MS)
         }
@@ -187,8 +187,13 @@ const BJ = (function () {
       userInterface.connectToNextRoundBtn(this)
     }
     
-    function dealCard () {
-      if (state.isRoundActive) return dealer.dealCard()
+    function dealCard ({ id, isAuto }) {
+      if (
+        state.isRoundActive &&
+        (isAuto || isTurn(id))
+      ) {
+        return dealer.dealCard()
+      }
     }
     
     // Hit on soft 17 rule is applied
@@ -203,7 +208,7 @@ const BJ = (function () {
         if (handSums.soft <= 11) return playerActive({ sum: handSums.hard, id })
         if (handSums.soft <= 21) return playerActive({ sum: handSums.soft, id })
         playerBust({ sum: handSums.soft, id })
-      } else {
+      } else if (isTurn(id)) {
         playerStands({
           sum: handSums.hard <= 21 ? handSums.hard : handSums.soft,
           id
@@ -227,6 +232,10 @@ const BJ = (function () {
 
     function selectMessageDisplay () {
       return document.querySelector(DOM_SELECTORS.house.message)
+    }
+
+    function isTurn (id) {
+      return roles[state.turn] === id
     }
     
     function savePlayerSums ({ id, handSums }) {
@@ -314,9 +323,14 @@ const BJ = (function () {
     }
     
     function finishRound () {
+      clearTurn()
       askAllPlayersToShowSums()
       checkWinner()
       deactivateRound()
+    }
+
+    function clearTurn () {
+      state.turn = ''
     }
 
     function askAllPlayersToShowSums () {
@@ -356,6 +370,20 @@ const BJ = (function () {
       userInterface.showNextRoundBtn()
     }
 
+    function activateRound () {
+      state.isRoundActive = true
+      takeDealingControl()
+      hideNextRoundBtn()
+    }
+
+    function takeDealingControl () {
+      state.turn = DEALER_ROLE
+    }
+    
+    function hideNextRoundBtn () {
+      userInterface.hideNextRoundBtn()
+    }
+
     function clearLastRound () {
       clearMessageDisplay()
       askAllPlayersToHideSums()
@@ -363,7 +391,6 @@ const BJ = (function () {
     }
 
     function startRound () {
-      takeDealingControl()
       prepareDealer()
       dealNewHand()
     }
@@ -383,21 +410,7 @@ const BJ = (function () {
         players[id].emptyHand()
       }
     }
-    
-    function activateRound () {
-      state.isRoundActive = true
-      hideNextRoundBtn()
-    }
-    
-    function hideNextRoundBtn () {
-      userInterface.hideNextRoundBtn()
-    }
-    
-    function takeDealingControl () {
-      state.turn = DEALER_ROLE
-    }
-
-    
+        
     function prepareDealer () {
       dealer.prepareForRound()
     }
@@ -597,8 +610,8 @@ const BJ = (function () {
       house = playerHouse
     }
     
-    function hit () {
-      askForCard()
+    function hit (isAuto = false) {
+      askForCard(isAuto)
       sendStateToHouse()
       informIfSecondCard()
     }
@@ -628,8 +641,8 @@ const BJ = (function () {
       return isHousePlayer
     }
 
-    function askForCard () {
-      const newCard = house.dealCard()
+    function askForCard (isAuto) {
+      const newCard = house.dealCard({id, isAuto})
       newCard && hand.addCard(newCard)
     }
     
