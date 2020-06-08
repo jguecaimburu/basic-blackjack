@@ -71,7 +71,6 @@ const BJ = (function () {
   /*  GLOBALS
   ----------------------------------------------- */
 
-  const gameState = {}
   let house
   let dealer
   let housePlayer
@@ -936,4 +935,4 @@ const BJ = (function () {
 
 }())
 
-console.log('Vegas bb!')
+console.log('Vegas baby!')
