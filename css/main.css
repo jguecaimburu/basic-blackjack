@@ -75,6 +75,12 @@ button::-moz-focus-inner {
   overflow: hidden;
 }
 
+@media (max-height: 650px) {
+  html {
+    font-size: 12px;
+  }
+}
+
 @media (max-width: 600px) {
   html {
     font-size: 12px;
@@ -141,6 +147,19 @@ button::-moz-focus-inner {
   margin-bottom: 3.3rem;
 }
 
+@media (max-height: 800px) {
+  .house-message {
+    margin-top: 1rem;
+  }
+
+  .hand--player-0 {
+    margin-top: -1rem;
+  }
+  .hand--player-1 {
+    margin-bottom: 0.5rem;
+  }
+}
+
 @media (max-width: 950px) {
   .house-message {
     margin-top: -1rem;
@@ -163,6 +182,22 @@ button::-moz-focus-inner {
   }
   .hand--player-1 {
     margin-bottom: 10rem;
+  }
+}
+
+@media (max-height: 650px) {
+  .house-message {
+    font-size: 1.75rem;
+    margin-top: -1rem;
+  }
+  .hand {
+    height: 11rem;
+  }
+  .hand--player-0 {
+    margin-top: -1rem;
+  } 
+  .hand--player-1 {
+    margin-bottom: 5rem;
   }
 }
 
